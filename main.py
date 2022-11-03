@@ -8,6 +8,8 @@ from datetime import datetime
 import json
 from discord.ui import Select, View
 from discord.ext import commands
+from discord.ui import Button
+from discord import app_commands
 
 # get token
 with open('config.json') as f:
@@ -139,6 +141,7 @@ async def get_history(ctx, member: discord.User):
             "date", direction=firestore.Query.DESCENDING)
         history_results = query.stream()
         count = 0
+        sum_of_points = 0
         for history_result in history_results:
             count += 1
             history_item_dict = history_result.to_dict()
@@ -146,4 +149,28 @@ async def get_history(ctx, member: discord.User):
         **Data:** {datetime.fromtimestamp(history_item_dict['date'].timestamp()).strftime('%m/%d/%Y, %H:%M:%S')}
         **Powód kary:** {history_item_dict["reason"]}
         **Punktacja kary:** {history_item_dict["new_points"] - history_item_dict["old_points"]}""")
+            sum_of_points += history_item_dict["new_points"] - \
+                history_item_dict["old_points"]
+        await ctx.send(f"`Suma punktów: {sum_of_points}`")
+
+tree = app_commands.CommandTree(client=discord)
+
+
+@tree.command(name="Test ui", description="Testing new UI")
+async def test_ui(interaction: discord.Interaction):
+    btn_next = Button(label="Next",
+                      style=discord.ButtonStyle.gray,
+                      emoji="▶️")
+
+    btn_back = Button(label="Back", style=discord.ButtonStyle.gray, emoji="◀️")
+
+    async def button_callback(interaction):
+        await interaction.response.send_message("Hi!")
+
+    btn_next.callback = button_callback
+
+    view = View()
+    view.add_item(btn_next)
+    await interaction.response.send_message("Hi!", view=view)
+
 bot.run(TOKEN)
