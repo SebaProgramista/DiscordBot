@@ -125,4 +125,18 @@ async def self(interaction: discord.Interaction, member: discord.User):
         await interaction.response.send_message(embed=embed)
 
 
+@tree.command(name="add_points")
+async def self(interaction: discord.Interaction, member: discord.User, points: int, reason: str):
+    print("yes")
+
+
+@tree.command(name="remove_points")
+async def self(interaction: discord.Interaction, member: discord.User, points: int, reason: str):
+    print("yes")
+
+
+@tree.command(name="penalties")
+async def self(interaction: discord.Interaction, member: discord.User, points: int, reason: str):
+    print("yes")
+
 client.run(TOKEN)
