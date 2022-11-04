@@ -66,6 +66,7 @@ async def self(interaction: discord.Interaction, member: discord.User):
             count += 1
             history_item_dict = history_result.to_dict()
             data_item = {
+                "key": history_result.id,
                 "date": datetime.fromtimestamp(history_item_dict['date'].timestamp()).strftime('%d/%m/%Y, %H:%M:%S'),
                 "reason": history_item_dict["reason"],
                 "added_points": history_item_dict["new_points"] - history_item_dict["old_points"],
@@ -82,7 +83,7 @@ async def self(interaction: discord.Interaction, member: discord.User):
 
         index = 0
         embed = discord.Embed(
-            description=f"**Data:** {data[index]['date']}\n**Powód kary:** {data[index]['reason']}\n**Punktacja:** {data[index]['added_points']}\n**Zmiana punktów:** {data[index]['change_points']}",
+            description=f"**ID:** {data[index]['key']}\n**Data:** {data[index]['date']}\n**Powód kary:** {data[index]['reason']}\n**Punktacja:** {data[index]['added_points']}\n**Zmiana punktów:** {data[index]['change_points']}",
             type="article")
         embed.set_author(
             name=f"Historia użytkownika {member.name}", icon_url=member.avatar.url)
@@ -93,7 +94,7 @@ async def self(interaction: discord.Interaction, member: discord.User):
             nonlocal index, embed
             if index + 1 < len(data):
                 index += 1
-            embed.description = f"**Data:** {data[index]['date']}\n**Powód kary:** {data[index]['reason']}\n**Punktacja:** {data[index]['added_points']}\n**Zmiana punktów:** {data[index]['change_points']}"
+            embed.description = f"**ID:** {data[index]['key']}\n**Data:** {data[index]['date']}\n**Powód kary:** {data[index]['reason']}\n**Punktacja:** {data[index]['added_points']}\n**Zmiana punktów:** {data[index]['change_points']}"
             embed.set_footer(
                 text=f"Kara {len(data) - index} z {len(data)} | Suma punktów: {sum_of_points}")
             await interaction.response.edit_message(embed=embed)
@@ -102,7 +103,7 @@ async def self(interaction: discord.Interaction, member: discord.User):
             nonlocal index, embed
             if index - 1 >= 0:
                 index -= 1
-            embed.description = f"**Data:** {data[index]['date']}\n**Powód kary:** {data[index]['reason']}\n**Punktacja:** {data[index]['added_points']}\n**Zmiana punktów:** {data[index]['change_points']}"
+            embed.description = f"**ID:** {data[index]['key']}\n**Data:** {data[index]['date']}\n**Powód kary:** {data[index]['reason']}\n**Punktacja:** {data[index]['added_points']}\n**Zmiana punktów:** {data[index]['change_points']}"
             embed.set_footer(
                 text=f"Kara {len(data) - index} z {len(data)} | Suma punktów: {sum_of_points}")
             await interaction.response.edit_message(embed=embed)
@@ -127,16 +128,47 @@ async def self(interaction: discord.Interaction, member: discord.User):
 
 @tree.command(name="add_points")
 async def self(interaction: discord.Interaction, member: discord.User, points: int, reason: str):
-    print("yes")
+
+    user_ref = db.collection("users").document(str(member.id))
+    if user_ref.get().exists:
+        actual_points = user_ref.get().to_dict()["points"]
+    else:
+        actual_points = 0
+
+    embed = discord.Embed(
+        description=f"**Powód:** {reason}\n**Punkty za warna:** {points}\n**Aktualne punkty:** {actual_points}", type="article")
+    embed.set_author(
+        name=f"Dodanie warna użytkownikowi {member.name}", icon_url=member.avatar.url)
+
+    btn_confirm = Button(
+        label="Confirm", style=discord.ButtonStyle.green, emoji="✔️")
+    btn_cancel = Button(
+        label="Cancel", style=discord.ButtonStyle.red, emoji="✖️")
+
+    async def btn_confirm_callback(interaction: discord.Interaction):
+        await interaction.response.send_message(embed=embed)
+
+    async def btn_cancel_callback(interaction: discord.Interaction):
+        await interaction.message.delete()
+        await interaction.response.send_message("deleted")
+
+    btn_confirm.callback = btn_confirm_callback
+    btn_cancel.callback = btn_cancel_callback
+
+    view = View()
+    view.add_item(btn_confirm)
+    view.add_item(btn_cancel)
+
+    await interaction.response.send_message(view=view, embed=embed)
 
 
 @tree.command(name="remove_points")
-async def self(interaction: discord.Interaction, member: discord.User, points: int, reason: str):
-    print("yes")
+async def self(interaction: discord.Interaction, member: discord.User, key: str):
+    await interaction.response.send_message(f"{member} {key}")
 
 
 @tree.command(name="penalties")
 async def self(interaction: discord.Interaction, member: discord.User, points: int, reason: str):
-    print("yes")
+    await interaction.response.send_message(f"{member}")
 
 client.run(TOKEN)
