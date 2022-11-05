@@ -215,6 +215,7 @@ async def self(interaction: discord.Interaction, member: discord.User, key: str)
             label="Cancel", style=discord.ButtonStyle.red, emoji="✖️")
 
         async def btn_confirm_callback(interaction):
+            history_ref.delete()
             embed = discord.Embed(
                 description=f"Pomyślnie usunięto warna użytkownika {member.name}", color=discord.Colour.green())
             embed.set_author(
@@ -239,10 +240,5 @@ async def self(interaction: discord.Interaction, member: discord.User, key: str)
         embed.set_author(
             name=f"Usunięcie warna użytkownikowi {member.name}", icon_url=member.avatar.url)
         await interaction.response.send_message(embed=embed)
-
-
-@ tree.command(name="penalties")
-async def self(interaction: discord.Interaction, member: discord.User, points: int, reason: str):
-    await interaction.response.send_message(f"{member}")
 
 client.run(TOKEN)
