@@ -180,7 +180,7 @@ async def self(interaction: discord.Interaction, member: discord.User, points: i
         await interaction.response.edit_message(embed=embed, view=None)
 
     async def btn_cancel_callback(interaction: discord.Interaction):
-        await interaction.response.edit_message(content="deleted", embed=None, view=None)
+        await interaction.response.edit_message(content="canceled", embed=None, view=None)
 
     btn_confirm.callback = btn_confirm_callback
     btn_cancel.callback = btn_cancel_callback
@@ -194,10 +194,54 @@ async def self(interaction: discord.Interaction, member: discord.User, points: i
 
 @tree.command(name="remove_points")
 async def self(interaction: discord.Interaction, member: discord.User, key: str):
-    await interaction.response.send_message(f"{member} {key}")
+
+    history_ref = db.collection("users").document(
+        str(member.id)).collection("history").document(str(key))
+    if history_ref.get().exists:
+        reason = history_ref.get().to_dict()["reason"]
+        date = datetime.fromtimestamp(
+            history_ref.get().to_dict()['date'].timestamp()).strftime('%d/%m/%Y, %H:%M:%S')
+        points = history_ref.get().to_dict(
+        )["new_points"] - history_ref.get().to_dict()["old_points"]
+
+        embed = discord.Embed(
+            description=f"**ID:** {key}\n**Data:** {date}\n**Powód kary:** {reason}\n**Punktacja:** {points}", type="article")
+        embed.set_author(
+            name=f"Usunięcie warna użytkownikowi {member.name}", icon_url=member.avatar.url)
+
+        btn_confirm = Button(
+            label="Confirm", style=discord.ButtonStyle.green, emoji="✔️")
+        btn_cancel = Button(
+            label="Cancel", style=discord.ButtonStyle.red, emoji="✖️")
+
+        async def btn_confirm_callback(interaction):
+            embed = discord.Embed(
+                description=f"Pomyślnie usunięto warna użytkownika {member.name}", color=discord.Colour.green())
+            embed.set_author(
+                name=f"Usunięcie warna użytkownika {member.name}", icon_url=member.avatar.url)
+            await interaction.response.edit_message(embed=embed, view=None)
+
+        async def btn_cancel_callback(interaction):
+            await interaction.response.edit_message(
+                content="canceled", view=None, embed=None)
+
+        btn_confirm.callback = btn_confirm_callback
+        btn_cancel.callback = btn_cancel_callback
+
+        view = View()
+        view.add_item(btn_confirm)
+        view.add_item(btn_cancel)
+
+        await interaction.response.send_message(view=view, embed=embed)
+    else:
+        embed = discord.Embed(
+            description="Podany użytkownik nie posiada warna o takim ID", color=discord.Colour.red())
+        embed.set_author(
+            name=f"Usunięcie warna użytkownikowi {member.name}", icon_url=member.avatar.url)
+        await interaction.response.send_message(embed=embed)
 
 
-@tree.command(name="penalties")
+@ tree.command(name="penalties")
 async def self(interaction: discord.Interaction, member: discord.User, points: int, reason: str):
     await interaction.response.send_message(f"{member}")
 
