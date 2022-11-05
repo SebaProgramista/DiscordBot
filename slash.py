@@ -146,11 +146,41 @@ async def self(interaction: discord.Interaction, member: discord.User, points: i
         label="Cancel", style=discord.ButtonStyle.red, emoji="✖️")
 
     async def btn_confirm_callback(interaction: discord.Interaction):
-        await interaction.response.send_message(embed=embed)
+        nonlocal embed
+        user_ref = db.collection("users").document(str(member.id))
+        user_data = user_ref.get()
+        if user_data.exists:
+            # set user's points
+            user_points = user_data.to_dict()["points"]
+            user_ref.set({
+                "points": user_points + points
+            })
+
+            # add item to history
+            user_ref.collection("history").add({
+                "new_points": user_points + points,
+                "old_points": user_points,
+                "reason": reason,
+                "date": datetime.now()
+            })
+
+        else:
+            # create new user
+            user_ref.set({"points": points})
+            user_ref.collection("history").add({
+                "new_points": points,
+                "old_points": 0,
+                "reason": reason,
+                "date": datetime.now()
+            })
+        embed.description = f"Warn został dodany pomyślnie\n**Aktualne punkty:** {points}"
+        embed.color = discord.Colour.green()
+        embed.set_author(
+            name=f"Dodanie warna użytkownikowi {member.name}", icon_url=member.avatar.url)
+        await interaction.response.edit_message(embed=embed, view=None)
 
     async def btn_cancel_callback(interaction: discord.Interaction):
-        await interaction.message.delete()
-        await interaction.response.send_message("deleted")
+        await interaction.response.edit_message(content="deleted", embed=None, view=None)
 
     btn_confirm.callback = btn_confirm_callback
     btn_cancel.callback = btn_cancel_callback
