@@ -49,6 +49,18 @@ client = aclient()
 tree = app_commands.CommandTree(client)
 
 
+@tree.command(name='help')
+async def self(interaction: discord.Interaction):
+    # Create embed
+    embed = discord.Embed(
+        description=f'**Komendy:**\n`history`, `add_points`, `remove_points`', type='article')
+    embed.set_author(name=f'Lista komend',
+                     icon_url=client.application.icon.url)
+
+    # Send interaction
+    await interaction.response.send_message(embed=embed)
+
+
 @tree.command(name="history", description="Get history of penalties of certain user")
 async def self(interaction: discord.Interaction, member: discord.User):
     user_ref = db.collection("users").document(
@@ -173,7 +185,7 @@ async def self(interaction: discord.Interaction, member: discord.User, points: i
                 "reason": reason,
                 "date": datetime.now()
             })
-        embed.description = f"Warn został dodany pomyślnie\n**Aktualne punkty:** {points}"
+        embed.description = f"Warn został dodany pomyślnie\n**Aktualne punkty:** {actual_points}"
         embed.color = discord.Colour.green()
         embed.set_author(
             name=f"Dodanie warna użytkownikowi {member.name}", icon_url=member.avatar.url)
