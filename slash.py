@@ -13,6 +13,7 @@ from firebase_admin import credentials
 from firebase_admin import firestore
 import firebase_admin
 import discord
+from discord.ext.commands import has_permissions
 from datetime import datetime
 
 import json
@@ -87,7 +88,10 @@ async def self(interaction: discord.Interaction, member: discord.User):
             added_points = history_item_dict["new_points"] - \
                 history_item_dict["old_points"]
 
-            description += f"`Index: {idx + 1} | Key: {key}`\n**Date:** {date}\n**Powód:** {reason}\n**Punktacja:** {added_points}\n\n"
+            if (interaction.permissions.administrator):
+                description += f"`Index: {idx + 1} | Key: {key}`\n**Date:** {date}\n**Powód:** {reason}\n**Punktacja:** {added_points}\n\n"
+            else:
+                description += f"`Index: {idx + 1}`\n**Date:** {date}\n**Powód:** {reason}\n**Punktacja:** {added_points}\n\n"
 
             sum_of_points += history_item_dict["new_points"] - \
                 history_item_dict["old_points"]
