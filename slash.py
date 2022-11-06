@@ -63,76 +63,47 @@ async def self(interaction: discord.Interaction):
 
 @tree.command(name="history", description="Get history of penalties of certain user")
 async def self(interaction: discord.Interaction, member: discord.User):
+
+    embed = discord.Embed(type="article")
+    sum_of_points = 0
+    description = ""
+
     user_ref = db.collection("users").document(
         str(member.id))
 
     if user_ref.get().exists:
-        data = []
         history_ref = user_ref.collection("history")
         query = history_ref.order_by(
             "date", direction=firestore.Query.DESCENDING)
         history_results = query.stream()
-        count = 0
-        sum_of_points = 0
-        for history_result in history_results:
-            count += 1
+
+        for idx, history_result in enumerate(history_results):
             history_item_dict = history_result.to_dict()
-            data_item = {
-                "key": history_result.id,
-                "date": datetime.fromtimestamp(history_item_dict['date'].timestamp()).strftime('%d/%m/%Y, %H:%M:%S'),
-                "reason": history_item_dict["reason"],
-                "added_points": history_item_dict["new_points"] - history_item_dict["old_points"],
-                "change_points": f"{history_item_dict['old_points']} -> {history_item_dict['new_points']}"
-            }
-            data.append(data_item)
+
+            key = history_result.id
+            date = datetime.fromtimestamp(
+                history_item_dict['date'].timestamp()).strftime('%d/%m/%Y, %H:%M:%S')
+            reason = history_item_dict["reason"]
+            added_points = history_item_dict["new_points"] - \
+                history_item_dict["old_points"]
+
+            description += f"`Index: {idx + 1} | Key: {key}`\n**Date:** {date}\n**Powód:** {reason}\n**Punktacja:** {added_points}\n\n"
+
             sum_of_points += history_item_dict["new_points"] - \
                 history_item_dict["old_points"]
 
-        btn_next = Button(
-            label="Next", style=discord.ButtonStyle.gray, emoji="▶️")
-        btn_back = Button(
-            label="Back", style=discord.ButtonStyle.gray, emoji="◀️")
-
-        index = 0
-        embed = discord.Embed(
-            description=f"**ID:** {data[index]['key']}\n**Data:** {data[index]['date']}\n**Powód kary:** {data[index]['reason']}\n**Punktacja:** {data[index]['added_points']}\n**Zmiana punktów:** {data[index]['change_points']}",
-            type="article")
+        embed.description = description
         embed.set_author(
             name=f"Historia użytkownika {member.name}", icon_url=member.avatar.url)
         embed.set_footer(
-            text=f"Kara {len(data) - index} z {len(data)} | Suma punktów: {sum_of_points}")
+            text=f"Suma punktów: {sum_of_points}")
 
-        async def btn_next_callback(interaction):
-            nonlocal index, embed
-            if index + 1 < len(data):
-                index += 1
-            embed.description = f"**ID:** {data[index]['key']}\n**Data:** {data[index]['date']}\n**Powód kary:** {data[index]['reason']}\n**Punktacja:** {data[index]['added_points']}\n**Zmiana punktów:** {data[index]['change_points']}"
-            embed.set_footer(
-                text=f"Kara {len(data) - index} z {len(data)} | Suma punktów: {sum_of_points}")
-            await interaction.response.edit_message(embed=embed)
-
-        async def btn_back_callback(interaction):
-            nonlocal index, embed
-            if index - 1 >= 0:
-                index -= 1
-            embed.description = f"**ID:** {data[index]['key']}\n**Data:** {data[index]['date']}\n**Powód kary:** {data[index]['reason']}\n**Punktacja:** {data[index]['added_points']}\n**Zmiana punktów:** {data[index]['change_points']}"
-            embed.set_footer(
-                text=f"Kara {len(data) - index} z {len(data)} | Suma punktów: {sum_of_points}")
-            await interaction.response.edit_message(embed=embed)
-
-        btn_next.callback = btn_next_callback
-        btn_back.callback = btn_back_callback
-
-        view = View()
-        view.add_item(btn_back)
-        view.add_item(btn_next)
-
-        await interaction.response.send_message(view=view, embed=embed)
+        await interaction.response.send_message(embed=embed)
 
     else:
 
         embed = discord.Embed(
-            description="Podany użytkownik nie posiada żadnych wprowadzonych kar do bazy danych", color=discord.Colour.red())
+            description="Podany użytkownik nie posiada żadnych wprowadzonych warnów do bazy danych", color=discord.Colour.red())
         embed.set_author(
             name=f"Historia użytkownika {member.name}", icon_url=member.avatar.url)
         await interaction.response.send_message(embed=embed)
