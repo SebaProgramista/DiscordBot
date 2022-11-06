@@ -65,6 +65,14 @@ async def self(interaction: discord.Interaction):
 @tree.command(name="history", description="Get history of penalties of certain user")
 async def self(interaction: discord.Interaction, member: discord.User):
 
+    if interaction.permissions.administrator == False and member.id is not interaction.user.id:
+        embed = discord.Embed(
+            description="Nie masz uprawnień do sprawdzenia historii kar innego użytkownika!", color=discord.Colour.red())
+        embed.set_author(
+            name=f"Historia użytkownika {member.name}", icon_url=member.avatar.url)
+        await interaction.response.send_message(embed=embed)
+        return
+
     embed = discord.Embed(type="article")
     sum_of_points = 0
     description = ""
@@ -88,7 +96,7 @@ async def self(interaction: discord.Interaction, member: discord.User):
             added_points = history_item_dict["new_points"] - \
                 history_item_dict["old_points"]
 
-            if (interaction.permissions.administrator):
+            if interaction.permissions.administrator:
                 description += f"`Index: {idx + 1} | Key: {key}`\n**Date:** {date}\n**Powód:** {reason}\n**Punktacja:** {added_points}\n\n"
             else:
                 description += f"`Index: {idx + 1}`\n**Date:** {date}\n**Powód:** {reason}\n**Punktacja:** {added_points}\n\n"
@@ -105,7 +113,6 @@ async def self(interaction: discord.Interaction, member: discord.User):
         await interaction.response.send_message(embed=embed)
 
     else:
-
         embed = discord.Embed(
             description="Podany użytkownik nie posiada żadnych wprowadzonych warnów do bazy danych", color=discord.Colour.red())
         embed.set_author(
