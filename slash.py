@@ -54,7 +54,7 @@ tree = app_commands.CommandTree(client)
 async def self(interaction: discord.Interaction):
 
     isAdmin = False
-    if interaction.author.guild_permissions.administrator:
+    if interaction.permissions.administrator:
         isAdmin = True
 
     if isAdmin:
