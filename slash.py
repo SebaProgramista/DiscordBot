@@ -52,11 +52,23 @@ tree = app_commands.CommandTree(client)
 
 @tree.command(name='help')
 async def self(interaction: discord.Interaction):
-    # Create embed
-    embed = discord.Embed(
-        description=f'**Komendy:**\n`history`, `add_points`, `remove_points`', type='article')
-    embed.set_author(name=f'Lista komend',
-                     icon_url=client.application.icon.url)
+
+    isAdmin = False
+    if interaction.author.guild_permissions.administrator:
+        isAdmin = True
+
+    if isAdmin:
+        # Create embed for admins
+        embed = discord.Embed(
+            description=f'**Komendy:**\n`history`, `add_points`, `remove_points`', type='article')
+        embed.set_author(name=f'Lista komend',
+                         icon_url=client.application.icon.url)
+    else:
+        # Create embed for users
+        embed = discord.Embed(
+            description=f'**Komendy:**\n`history`', type='article')
+        embed.set_author(name=f'Lista komend',
+                         icon_url=client.application.icon.url)
 
     # Send interaction
     await interaction.response.send_message(embed=embed)
