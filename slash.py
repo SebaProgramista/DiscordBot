@@ -121,6 +121,7 @@ async def self(interaction: discord.Interaction, member: discord.User):
 
 
 @tree.command(name="add_points")
+@app_commands.default_permissions(administrator=True)
 async def self(interaction: discord.Interaction, member: discord.User, points: int, reason: str):
 
     user_ref = db.collection("users").document(str(member.id))
@@ -187,6 +188,7 @@ async def self(interaction: discord.Interaction, member: discord.User, points: i
 
 
 @tree.command(name="remove_points")
+@app_commands.default_permissions(administrator=True)
 async def self(interaction: discord.Interaction, member: discord.User, key: str):
 
     history_ref = db.collection("users").document(
