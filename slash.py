@@ -24,12 +24,12 @@ from discord.ext import commands
 from discord.ui import Button
 from discord import app_commands
 
-# get token
+# Get token from config.json
 with open('config.json') as f:
     data = json.load(f)
     TOKEN = data["TOKEN"]
 
-# firebase_admin
+# Firebase setup
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
@@ -76,7 +76,7 @@ async def self(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 
 
-@tree.command(name="history", description="Get history of penalties of certain user")
+@tree.command(name="history", description="Pokazuje historię warnów")
 async def self(interaction: discord.Interaction, member: discord.User):
 
     if interaction.permissions.administrator == False and member.id is not interaction.user.id:
@@ -134,7 +134,7 @@ async def self(interaction: discord.Interaction, member: discord.User):
         await interaction.response.send_message(embed=embed)
 
 
-@tree.command(name="add_points")
+@tree.command(name="add_points", description="Dodaje warna użytkownikowi")
 @app_commands.default_permissions(administrator=True)
 async def self(interaction: discord.Interaction, member: discord.User, points: int, reason: str):
 
@@ -201,7 +201,7 @@ async def self(interaction: discord.Interaction, member: discord.User, points: i
     await interaction.response.send_message(view=view, embed=embed)
 
 
-@tree.command(name="remove_points")
+@tree.command(name="remove_points", description="Usuwa warna użytkownikowi")
 @app_commands.default_permissions(administrator=True)
 async def self(interaction: discord.Interaction, member: discord.User, key: str):
 
@@ -259,16 +259,19 @@ async def self(interaction: discord.Interaction, members: str):
     embed.set_author(name=f'Tworzenie drużyn',
                      icon_url=interaction.user.avatar.url)
 
-    # Max players per team
+    # Create teams
     members = members.split(',')
     teams = [[], []]
     random.shuffle(members)
     for i in range(len(members)):
         teams[i % 2].append(members[i])
 
+    # Add teams to embed
     embed.description = f'**Drużyna 1:** {", ".join(teams[0])}\n**Drużyna 2:** {", ".join(teams[1])}'
 
     # Send interaction
     await interaction.response.send_message(embed=embed)
 
+
+# Run bot
 client.run(TOKEN)
