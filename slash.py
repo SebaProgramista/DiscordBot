@@ -3,6 +3,8 @@ from firebase_admin import firestore
 import firebase_admin
 import discord
 from datetime import datetime
+import math
+import random
 
 import json
 from discord.ui import Select, View
@@ -248,5 +250,25 @@ async def self(interaction: discord.Interaction, member: discord.User, key: str)
         embed.set_author(
             name=f"Usunięcie warna użytkownikowi {member.name}", icon_url=member.avatar.url)
         await interaction.response.send_message(embed=embed)
+
+
+@tree.command(name='team_gen', description='Generuje drużyny na podstawie podanych osób')
+async def self(interaction: discord.Interaction, members: str):
+    # Create embed
+    embed = discord.Embed(description=f'', type='article')
+    embed.set_author(name=f'Tworzenie drużyn',
+                     icon_url=interaction.user.avatar.url)
+
+    # Max players per team
+    members = members.split(',')
+    teams = [[], []]
+    random.shuffle(members)
+    for i in range(len(members)):
+        teams[i % 2].append(members[i])
+
+    embed.description = f'**Drużyna 1:** {", ".join(teams[0])}\n**Drużyna 2:** {", ".join(teams[1])}'
+
+    # Send interaction
+    await interaction.response.send_message(embed=embed)
 
 client.run(TOKEN)
