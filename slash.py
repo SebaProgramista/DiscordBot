@@ -7,10 +7,11 @@ import math
 import random
 
 import json
-from discord.ui import Select, View
+from discord.ui import Select, View, TextInput
 from discord.ext import commands
 from discord.ui import Button
-from discord import app_commands
+import discord.utils
+from discord import CategoryChannel, app_commands
 from firebase_admin import credentials
 from firebase_admin import firestore
 import firebase_admin
@@ -28,6 +29,8 @@ from discord import app_commands
 with open('config.json') as f:
     data = json.load(f)
     TOKEN = data["TOKEN"]
+    GUILD_ID = int(data["GUILD"])
+    EVENTS_CATEGORY_ID = int(data["EVENTS_CATEGORY"])
 
 # Firebase setup
 cred = credentials.Certificate("serviceAccountKey.json")
@@ -43,7 +46,7 @@ class aclient(discord.Client):
     async def on_ready(self):
         await self.wait_until_ready()
         if not self.synced:
-            await tree.sync()
+            await tree.sync(guild=discord.Object(id=GUILD_ID))
             self.synced = True
         print(f"We have logged in as {self.user}")
 
@@ -52,7 +55,7 @@ client = aclient()
 tree = app_commands.CommandTree(client)
 
 
-@tree.command(name='help')
+@tree.command(name='help', guild=discord.Object(id=GUILD_ID))
 async def self(interaction: discord.Interaction):
 
     isAdmin = False
@@ -76,7 +79,7 @@ async def self(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 
 
-@tree.command(name="history", description="Pokazuje historię warnów")
+@tree.command(name="history", description="Pokazuje historię warnów", guild=discord.Object(id=GUILD_ID))
 async def self(interaction: discord.Interaction, member: discord.User):
 
     if interaction.permissions.administrator == False and member.id is not interaction.user.id:
@@ -134,7 +137,7 @@ async def self(interaction: discord.Interaction, member: discord.User):
         await interaction.response.send_message(embed=embed)
 
 
-@tree.command(name="add_points", description="Dodaje warna użytkownikowi")
+@tree.command(name="add_points", description="Dodaje warna użytkownikowi", guild=discord.Object(id=GUILD_ID))
 @app_commands.default_permissions(administrator=True)
 async def self(interaction: discord.Interaction, member: discord.User, points: int, reason: str):
 
@@ -201,7 +204,7 @@ async def self(interaction: discord.Interaction, member: discord.User, points: i
     await interaction.response.send_message(view=view, embed=embed)
 
 
-@tree.command(name="remove_points", description="Usuwa warna użytkownikowi")
+@tree.command(name="remove_points", description="Usuwa warna użytkownikowi", guild=discord.Object(id=GUILD_ID))
 @app_commands.default_permissions(administrator=True)
 async def self(interaction: discord.Interaction, member: discord.User, key: str):
 
@@ -252,7 +255,7 @@ async def self(interaction: discord.Interaction, member: discord.User, key: str)
         await interaction.response.send_message(embed=embed)
 
 
-@tree.command(name='team_gen', description='Generuje drużyny na podstawie podanych osób')
+@tree.command(name='team_gen', description='Generuje drużyny na podstawie podanych osób', guild=discord.Object(id=GUILD_ID))
 async def self(interaction: discord.Interaction, members: str):
     # Create embed
     embed = discord.Embed(description=f'', type='article')
@@ -271,6 +274,59 @@ async def self(interaction: discord.Interaction, members: str):
 
     # Send interaction
     await interaction.response.send_message(embed=embed)
+
+
+@tree.command(name='create_event', description='Tworzy event, razem z kanałem', guild=discord.Object(id=GUILD_ID))
+@app_commands.default_permissions(administrator=True)
+async def self(interaction: discord.Interaction, name: str, date: str, voice_channel: discord.VoiceChannel):
+
+    async def create_new_embed(count_users):
+        embed = discord.Embed(
+            description=f'**Data:** {date}\n**Ilość osób:** {count_users}', type='article')
+        embed.set_author(name=f'Event {name}',
+                         icon_url=interaction.user.avatar.url)
+        return embed
+
+    start_time = discord.utils.snowflake_time(
+        discord.utils.time_snowflake(datetime.strptime(date, '%d/%m/%Y %H:%M:%S')))
+
+    event = await interaction.guild.create_scheduled_event(name=name, channel=voice_channel, start_time=start_time)
+
+    events_ref = db.collection('events')
+    events_ref.document(str(event.id)).set({
+        "date": datetime.strptime(date, '%d/%m/%Y %H:%M:%S'),
+        "image": "",
+        "name": name,
+    })
+    category = discord.Object(id=EVENTS_CATEGORY_ID)
+    channel = await interaction.guild.create_text_channel(name="chuj", category=category)
+    count_users = 0
+
+    btn_join = Button(label='Zapisz się',
+                      style=discord.ButtonStyle.green, emoji='✅')
+
+    async def btn_join_callback(interaction):
+        nonlocal count_users
+        if interaction.user.dm_channel is None:
+            await interaction.user.create_dm()
+        if events_ref.document(str(event.id)).collection("participants").document(str(interaction.user.id)).get().exists:
+            await interaction.user.dm_channel.send("Już jesteś zapisany na tym evencie")
+        else:
+            count_users += 1
+            events_ref.document(str(event.id)).collection(
+                "participants").document(str(interaction.user.id)).set({})
+            await interaction.user.dm_channel.send("Zostałeś zapisany na event!")
+        await message.edit(embed=await create_new_embed(count_users), view=view)
+        await interaction.response.defer()
+
+    btn_join.callback = btn_join_callback
+
+    view = View()
+    view.add_item(btn_join)
+
+    message = await channel.send(embed=await create_new_embed(count_users), view=view)
+
+    await interaction.response.send_message(content='Creating event...')
 
 
 # Run bot
