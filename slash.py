@@ -31,6 +31,8 @@ with open('config.json') as f:
     TOKEN = data["TOKEN"]
     GUILD_ID = int(data["GUILD"])
     EVENTS_CATEGORY_ID = int(data["EVENTS_CATEGORY"])
+    FIRST_WARN_ROLE = int(data["FIRST_WARN_ROLE"])
+    SECOND_WARN_ROLE = int(data["SECOND_WARN_ROLE"])
 
 # Firebase setup
 cred = credentials.Certificate("serviceAccountKey.json")
@@ -158,8 +160,9 @@ async def self(interaction: discord.Interaction, member: discord.User, points: i
         label="Cancel", style=discord.ButtonStyle.red, emoji="✖️")
 
     async def btn_confirm_callback(interaction: discord.Interaction):
-        nonlocal embed
+        nonlocal embed, actual_points
         user_ref = db.collection("users").document(str(member.id))
+        actual_points = actual_points + points
         user_data = user_ref.get()
         if user_data.exists:
             # set user's points
@@ -176,6 +179,12 @@ async def self(interaction: discord.Interaction, member: discord.User, points: i
                 "date": datetime.now()
             })
 
+            if user_points + points >= 30 and user_points + points < 60:
+                await member.add_roles(discord.Object(id=FIRST_WARN_ROLE))
+            elif user_points + points >= 60:
+                await member.remove_roles(discord.Object(id=FIRST_WARN_ROLE))
+                await member.add_roles(discord.Object(id=SECOND_WARN_ROLE))
+
         else:
             # create new user
             user_ref.set({"points": points})
@@ -185,6 +194,7 @@ async def self(interaction: discord.Interaction, member: discord.User, points: i
                 "reason": reason,
                 "date": datetime.now()
             })
+            actual_points = points
         embed.description = f"Warn został dodany pomyślnie\n**Aktualne punkty:** {actual_points}"
         embed.color = discord.Colour.green()
         embed.set_author(
@@ -276,6 +286,7 @@ async def self(interaction: discord.Interaction, members: str):
     await interaction.response.send_message(embed=embed)
 
 
+# In progress
 @tree.command(name='create_event', description='Tworzy event, razem z kanałem', guild=discord.Object(id=GUILD_ID))
 @app_commands.default_permissions(administrator=True)
 async def self(interaction: discord.Interaction, name: str, date: str, voice_channel: discord.VoiceChannel):
